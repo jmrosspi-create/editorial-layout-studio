@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editorial Layout Studio - Production Suite</title>
+    
+    <!-- Curated Editorial Typefaces -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Inter:ital,wght@0,300..900;1,300..900&family=JetBrains+Mono:ital,wght@0,300..800;1,300..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Space+Grotesk:wght@400;600;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+
+    <!-- html2canvas for High-Res 4K Exports -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        :root {
+            --bg-dark: #09090b;
+            --panel-bg: #121215;
+            --panel-card: #18181b;
+            --accent: #3b82f6;
+            --border: #27272a;
+            --text-main: #f4f4f5;
+            --text-muted: #8e8e93;
+            --radius-sm: 6px;
+            --radius-md: 10px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        body { background-color: var(--bg-dark); color: var(--text-main); display: grid; grid-template-columns: 1fr 480px; height: 100vh; overflow: hidden; }
+
+        /* Main Viewport Stage */
+        main { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 1.5rem; background: radial-gradient(circle at center, #181820 0%, #09090b 100%); position: relative; }
+        
+        .stage-container { 
+            width: 100%; 
+            max-width: 780px; 
+            aspect-ratio: 16/9; 
+            background: #18181b; 
+            border-radius: var(--radius-md); 
+            overflow: hidden; 
+            border: 1px solid var(--border); 
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.9); 
+            position: relative; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        /* Master Canvas Stage */
+        #editorialCanvas {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background-size: cover;
+            background-position: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 3rem;
+            box-sizing: border-box;
+            background-image: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1600&q=80');
+            transition: all 0.3s ease;
+        }
+
+        /* Split-Panel Column Mode Layout */
+        #editorialCanvas.split-column-mode {
+            padding: 0;
+            flex-direction: row;
+            background-position: right center;
+        }
+
+        .split-column-panel {
+            display: none;
+            width: 33%;
+            height: 100%;
+            background: rgba(9, 9, 11, 0.95);
+            padding: 2.5rem 2rem;
+            box-sizing: border-box;
+            flex-direction: column;
+            justify-content: space-between;
+            z-index: 10;
+            border-right: 1px solid var(--border);
+            transition: width 0.3s ease, background 0.3s ease;
+        }
+
+        #editorialCanvas.split-column-mode .split-column-panel {
+            display: flex;
+        }
+
+        #editorialCanvas.split-column-mode .scrim-overlay {
+            display: none;
+        }
+
+        #editorialCanvas.split-column-mode .editorial-content {
+            width: 67%;
+            padding: 2.5rem;
+            box-sizing: border-box;
+            pointer-events: none;
+        }
+
+        /* Split Panel Color Themes */
+        .split-theme-dark { background: rgba(9, 9, 11, 0.96); color: #ffffff; }
+        .split-theme-white { background: #ffffff; color: #09090b !important; }
+        .split-theme-white .headline-text, .split-theme-white .subhead-text, .split-theme-white .meta-text { color: #09090b !important; text-shadow: none !important; }
+        .split-theme-accent { background: var(--accent); color: #ffffff; }
+        .split-theme-glass { background: rgba(18, 18, 21, 0.75); backdrop-filter: blur(20px); border-right: 1px solid rgba(255,255,255,0.15); }
+
+        /* Scrim / Contrast Overlay */
+        .scrim-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(180deg, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.85) 100%);
+            pointer-events: none;
+            z-index: 1;
+            transition: background 0.3s ease;
+        }
+
+        .editorial-content {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* Dynamic Brand Logo Layer */
+        .brand-logo-container {
+            position: absolute;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            transition: all 0.2s ease;
+        }
+
+        .logo-pos-bottom-right { bottom: 2.5rem; right: 2.5rem; flex-direction: row-reverse; text-align: right; }
+        .logo-pos-bottom-left { bottom: 2.5rem; left: 2.5rem; flex-direction: row; text-align: left; }
+        .logo-pos-top-right { top: 2.5rem; right: 2.5rem; flex-direction: row-reverse; text-align: right; }
+        .logo-pos-top-left { top: 2.5rem; left: 2.5rem; flex-direction: row; text-align: left; }
+
+        .brand-logo-img {
+            max-height: 36px;
+            width: auto;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 6px rgba(0,0,0,0.4));
+        }
+
+        .brand-logo-img.invert-white {
+            filter: brightness(0) invert(1) drop-shadow(0 2px 6px rgba(0,0,0,0.4));
+        }
+
+        .brand-text-fallback {
+            font-family: var(--font-kicker);
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            color: #ffffff;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+        }
+
+        /* Dynamic Backdrop Box Types */
+        .backdrop-none { background: transparent; padding: 0; border-radius: 0; border: none; backdrop-filter: none; }
+        .backdrop-dark-box { background: rgba(9, 9, 11, 0.88); padding: 1.8rem; border-radius: var(--radius-sm); border-left: 4px solid var(--accent); box-shadow: 0 20px 40px rgba(0,0,0,0.6); }
+        .backdrop-white-box { background: #ffffff; color: #09090b !important; padding: 1.8rem; border-radius: var(--radius-sm); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .backdrop-white-box .headline-text, .backdrop-white-box .subhead-text, .backdrop-white-box .meta-text { color: #09090b !important; text-shadow: none !important; }
+        .backdrop-glass { background: rgba(18, 18, 21, 0.65); backdrop-filter: blur(16px); padding: 1.8rem; border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.12); }
+
+        /* Typography Presets */
+        .style-swiss {
+            --font-kicker: 'Inter', sans-serif;
+            --font-head: 'Inter', sans-serif;
+            --font-sub: 'Inter', sans-serif;
+            --weight-head: 900;
+            --head-transform: uppercase;
+        }
+
+        .style-broadsheet {
+            --font-kicker: 'Inter', sans-serif;
+            --font-head: 'Playfair Display', serif;
+            --font-sub: 'Playfair Display', serif;
+            --weight-head: 700;
+            --head-transform: none;
+        }
+
+        .style-minimal {
+            --font-kicker: 'Space Grotesk', sans-serif;
+            --font-head: 'Syne', sans-serif;
+            --font-sub: 'Space Grotesk', sans-serif;
+            --weight-head: 800;
+            --head-transform: none;
+        }
+
+        .style-tech {
+            --font-kicker: 'JetBrains Mono', monospace;
+            --font-head: 'Space Grotesk', sans-serif;
+            --font-sub: 'JetBrains Mono', monospace;
+            --weight-head: 700;
+            --head-transform: uppercase;
+        }
+
+        .style-bodoni {
+            --font-kicker: 'Inter', sans-serif;
+            --font-head: 'Bodoni Moda', serif;
+            --font-sub: 'Inter', sans-serif;
+            --weight-head: 700;
+            --head-transform: uppercase;
+        }
+
+        /* Editorial Typography Elements */
+        .kicker-text {
+            font-family: var(--font-kicker);
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.25em;
+            color: var(--accent);
+            margin-bottom: 0.6rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+
+        .kicker-rule {
+            height: 2px;
+            width: 28px;
+            background: var(--accent);
+            display: inline-block;
+        }
+
+        .headline-text {
+            font-family: var(--font-head);
+            font-size: 2.6rem;
+            font-weight: var(--weight-head);
+            text-transform: var(--head-transform);
+            letter-spacing: -0.03em;
+            line-height: 1.02;
+            color: #ffffff;
+            margin-bottom: 0.8rem;
+            text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+            max-width: 95%;
+        }
+
+        .headline-emphasis {
+            font-family: 'Playfair Display', serif;
+            font-style: italic;
+            font-weight: 400;
+            text-transform: none;
+            color: #f4f4f5;
+        }
+
+        .subhead-text {
+            font-family: var(--font-sub);
+            font-size: 0.95rem;
+            font-weight: 400;
+            line-height: 1.45;
+            color: #d4d4d8;
+            max-width: 85%;
+        }
+
+        .meta-text {
+            font-family: var(--font-kicker);
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: #a1a1aa;
+        }
+
+        /* Sidebar Panels */
+        aside { background-color: var(--panel-bg); border-left: 1px solid var(--border); display: flex; flex-direction: column; padding: 1.25rem; overflow-y: auto; gap: 1rem; }
+        .panel-header h1 { font-size: 1.1rem; font-weight: 700; margin-bottom: 0.2rem; }
+        .panel-header p { color: var(--text-muted); font-size: 0.78rem; }
+
+        .card { background: var(--panel-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1rem; }
+        .card-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 0.8rem; display: flex; justify-content: space-between; align-items: center; }
+
+        .control-group { margin-bottom: 0.8rem; }
+        .control-label { display: flex; justify-content: space-between; font-size: 0.75rem; margin-bottom: 0.35rem; color: #d4d4d8; }
+        .control-label span:last-child { color: var(--accent); font-weight: 600; }
+
+        input[type="text"], textarea, select {
+            width: 100%;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0.55rem;
+            font-size: 0.78rem;
+            border-radius: var(--radius-sm);
+            outline: none;
+        }
+        textarea { resize: vertical; min-height: 55px; }
+
+        input[type="range"] { width: 100%; -webkit-appearance: none; background: #27272a; height: 4px; border-radius: 2px; outline: none; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #f4f4f5; cursor: pointer; border: 2px solid var(--panel-bg); }
+
+        .file-upload { display: block; text-align: center; padding: 0.8rem; background-color: var(--bg-dark); border: 1px dashed var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.78rem; font-weight: 500; }
+        .file-upload input { display: none; }
+
+        .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.5rem; }
+        .btn-export {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            border: none;
+            color: #ffffff;
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            transition: filter 0.15s ease;
+        }
+        .btn-export-alt {
+            width: 100%;
+            padding: 0.75rem;
+            background: var(--bg-dark);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            border-radius: var(--radius-sm);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .btn-export:hover, .btn-export-alt:hover { filter: brightness(1.1); }
+
+        .color-preview-bar { display: flex; gap: 0.4rem; margin-top: 0.5rem; }
+        .color-dot { width: 22px; height: 22px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.2); cursor: pointer; }
+
+        .align-group { display: flex; gap: 0.4rem; }
+        .btn-align { flex: 1; padding: 0.4rem; background: var(--bg-dark); border: 1px solid var(--border); color: #fff; font-size: 0.75rem; border-radius: 4px; cursor: pointer; text-align: center; }
+        .btn-align.active { background: var(--accent); border-color: var(--accent); }
+
+        .checkbox-label { display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; color: #d4d4d8; cursor: pointer; }
+        .checkbox-label input { accent-color: var(--accent); }
+    </style>
+</head>
+<body class="style-swiss">
+
+    <main>
+        <div class="stage-container" id="stageContainer">
+            <div id="editorialCanvas">
+                <div class="scrim-overlay" id="scrimOverlay"></div>
+                
+                <!-- NEW: Dedicated Left Column Panel (For Split-Column Layout Mode) -->
+                <div class="split-column-panel split-theme-dark" id="splitColumnPanel">
+                    <div class="meta-text" id="splitMetaHeader">ISSUE NO. 04 • STRATEGY</div>
+                    <div id="splitTextBlock">
+                        <div class="kicker-text" id="splitKicker">
+                            <span class="kicker-rule"></span>
+                            <span id="splitKickerText">OPERATIONAL DIAGNOSTIC</span>
+                        </div>
+                        <div class="headline-text" id="splitHeadline" style="font-size: 2.1rem;">
+                            The Architecture of <span class="headline-emphasis">Quiet Operations</span>
+                        </div>
+                        <div class="subhead-text" id="splitSubhead" style="font-size: 0.85rem; max-width: 100%;">
+                            Examining how high-performing operational systems thrive without reliance on visible friction.
+                        </div>
+                    </div>
+                    <div class="meta-text" id="splitByline">BY J. MARCUS ROSS</div>
+                </div>
+
+                <!-- Dynamic Logo Anchor Layer -->
+                <div class="brand-logo-container logo-pos-bottom-right" id="brandLogoContainer">
+                    <img id="dispLogoImg" class="brand-logo-img invert-white" src="" alt="" style="display: none;">
+                    <div class="brand-text-fallback" id="dispLogoText">AD SOLUTUS</div>
+                </div>
+
+                <div class="editorial-content" id="editorialContent">
+                    <div id="topMetaBlock" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <div class="meta-text" id="dispMetaHeader">ISSUE NO. 04 • STRATEGY & RISK</div>
+                        <div class="meta-text" id="dispDateHeader">JULY 2026</div>
+                    </div>
+
+                    <div id="mainTextBlock" class="backdrop-none">
+                        <div class="kicker-text" id="dispKicker">
+                            <span class="kicker-rule" id="dispRule"></span>
+                            <span id="dispKickerText">OPERATIONAL DIAGNOSTIC</span>
+                        </div>
+                        <div class="headline-text" id="dispHeadline">
+                            The Architecture of <span class="headline-emphasis">Quiet Operations</span>
+                        </div>
+                        <div class="subhead-text" id="dispSubhead">
+                            Examining how high-performing operational systems thrive without reliance on visible friction or artificial noise.
+                        </div>
+                    </div>
+
+                    <div id="bottomMetaBlock" style="display: flex; justify-content: space-between; align-items: flex-end; width: 100%;">
+                        <div class="meta-text" id="dispByline">BY J. MARCUS ROSS</div>
+                        <div class="meta-text" id="dispPublisherSlot" style="visibility: hidden;">AD SOLUTUS</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <aside>
+        <div class="panel-header">
+            <h1>Editorial Layout Studio</h1>
+            <p>Pro Publication Engine</p>
+        </div>
+
+        <!-- 1. Midjourney Artwork & Palette -->
+        <div class="card">
+            <div class="card-title">1. Midjourney Source & Palette</div>
+            <label class="file-upload" style="margin-bottom: 0.6rem;">
+                <span id="uploadLabel">📷 Import Midjourney Image</span>
+                <input type="file" id="imageInput" accept="image/*">
+            </label>
+            <div class="control-group">
+                <div class="control-label">Aspect Ratio Format</div>
+                <select id="aspectSelect">
+                    <option value="16/9" selected>16:9 Web Hero Banner (1920x1080)</option>
+                    <option value="4/5">4:5 Magazine Cover / Social (1080x1350)</option>
+                    <option value="1.91/1">1.91:1 Open Graph Preview (1200x627)</option>
+                    <option value="1/1">1:1 Square Feature (1080x1080)</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <div class="control-label">Extracted Color Palette</div>
+                <div class="color-preview-bar" id="paletteBar">
+                    <div class="color-dot" style="background:#3b82f6" onclick="applyAccent('#3b82f6')"></div>
+                    <div class="color-dot" style="background:#d97706" onclick="applyAccent('#d97706')"></div>
+                    <div class="color-dot" style="background:#10b981" onclick="applyAccent('#10b981')"></div>
+                    <div class="color-dot" style="background:#8b5cf6" onclick="applyAccent('#8b5cf6')"></div>
+                    <div class="color-dot" style="background:#f4f4f5" onclick="applyAccent('#f4f4f5')"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. Logo & Brand Identity Controls -->
+        <div class="card">
+            <div class="card-title">2. Brand Logo & Identity</div>
+            <label class="file-upload" style="margin-bottom: 0.6rem;">
+                <span id="logoUploadLabel">🛡️ Upload Brand Logo (PNG/SVG)</span>
+                <input type="file" id="logoInput" accept="image/*">
+            </label>
+            <div class="control-group">
+                <div class="control-label">Company / Brand Name</div>
+                <input type="text" id="inputBrandName" value="AD SOLUTUS">
+            </div>
+            <div class="control-group">
+                <div class="control-label">Logo Placement Corner</div>
+                <select id="logoPosSelect">
+                    <option value="logo-pos-bottom-right" selected>Bottom-Right Corner</option>
+                    <option value="logo-pos-bottom-left">Bottom-Left Corner</option>
+                    <option value="logo-pos-top-right">Top-Right Corner</option>
+                    <option value="logo-pos-top-left">Top-Left Corner</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <div class="control-label"><span>Logo Height</span><span id="logoSizeVal">32px</span></div>
+                <input type="range" id="logoSizeSlider" min="16" max="90" value="32">
+            </div>
+            <div class="control-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="invertLogoCheck" checked>
+                    Invert Logo to Crisp White
+                </label>
+            </div>
+        </div>
+
+        <!-- 3. Magazine Layout Archetype & Typography -->
+        <div class="card">
+            <div class="card-title">3. Layout Archetype & Type System</div>
+            <div class="control-group">
+                <div class="control-label">Layout Archetype</div>
+                <select id="archetypeSelect">
+                    <option value="swiss-hero" selected>Swiss Editorial Grid (Bottom Anchor)</option>
+                    <option value="split-column">Split-Panel Column (Left Side Panel)</option>
+                    <option value="big-small-contrast">High-Contrast Word Emphasis ([Bracketed])</option>
+                    <option value="full-cover">Full Magazine Cover Spread</option>
+                    <option value="pull-quote">Editorial Excerpt / Pull Quote Block</option>
+                    <option value="executive-brief">Executive Diagnostic Briefing (Tech Monospace)</option>
+                </select>
+            </div>
+
+            <!-- Controls Specific to Split-Panel Layout -->
+            <div id="splitControls" style="display: none; background: var(--bg-dark); padding: 0.6rem; border-radius: var(--radius-sm); margin-bottom: 0.8rem; border: 1px solid var(--border);">
+                <div class="control-group">
+                    <div class="control-label">Side Column Width</div>
+                    <select id="splitWidthSelect">
+                        <option value="33%" selected>33% One-Third Width</option>
+                        <option value="25%">25% One-Quarter Width</option>
+                        <option value="40%">40% Wide Panel</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <div class="control-label">Side Column Theme</div>
+                    <select id="splitThemeSelect">
+                        <option value="split-theme-dark" selected>Solid Dark Panel</option>
+                        <option value="split-theme-white">Swiss White Panel</option>
+                        <option value="split-theme-accent">Accent Color Solid Panel</option>
+                        <option value="split-theme-glass">Frosted Glass Blur</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">Type System</div>
+                <select id="presetSelect">
+                    <option value="style-swiss" selected>Swiss Modernist (Inter Heavy)</option>
+                    <option value="style-broadsheet">Classic Broadsheet (Playfair Serif)</option>
+                    <option value="style-minimal">Contemporary Minimal (Syne Display)</option>
+                    <option value="style-tech">Tech Monospace (JetBrains / Space)</option>
+                    <option value="style-bodoni">Editorial High-Fashion (Bodoni Moda)</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <div class="control-label">Text Block Alignment</div>
+                <div class="align-group">
+                    <button class="btn-align active" onclick="setTextAlign('left')">Left</button>
+                    <button class="btn-align" onclick="setTextAlign('center')">Center</button>
+                    <button class="btn-align" onclick="setTextAlign('right')">Right</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. Legibility & Contrast Backdrop Engine -->
+        <div class="card">
+            <div class="card-title">4. Text Legibility & Backdrop Panel</div>
+            <div class="control-group">
+                <div class="control-label">Legibility Backdrop Box</div>
+                <select id="backdropSelect">
+                    <option value="backdrop-none" selected>None (Direct Image Overlay)</option>
+                    <option value="backdrop-dark-box">Solid Dark Panel (High Contrast)</option>
+                    <option value="backdrop-white-box">Swiss White Panel (High Contrast)</option>
+                    <option value="backdrop-glass">Frosted Glassmorphism Blur</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <div class="control-label"><span>Background Darkening Scrim</span><span id="scrimVal">50%</span></div>
+                <input type="range" id="scrimSlider" min="0" max="100" value="50">
+            </div>
+        </div>
+
+        <!-- 5. Copy & Micro-Typographic Controls -->
+        <div class="card">
+            <div class="card-title">5. Editorial Content Copy</div>
+            <div class="control-group">
+                <div class="control-label">Issue / Top Header Left</div>
+                <input type="text" id="inputMetaHeader" value="ISSUE NO. 04 • STRATEGY & RISK">
+            </div>
+            <div class="control-group">
+                <div class="control-label">Publication Date / Top Header Right</div>
+                <input type="text" id="inputDateHeader" value="JULY 2026">
+            </div>
+            <div class="control-group">
+                <div class="control-label">Category / Kicker</div>
+                <input type="text" id="inputKicker" value="OPERATIONAL DIAGNOSTIC">
+            </div>
+            <div class="control-group">
+                <div class="control-label">Headline Title (Use [Word] for Italic Serif)</div>
+                <input type="text" id="inputHeadline" value="The Architecture of [Quiet Operations]">
+            </div>
+            <div class="control-group">
+                <div class="control-label">Subtitle / Excerpt</div>
+                <textarea id="inputSubhead">Examining how high-performing operational systems thrive without reliance on visible friction or artificial noise.</textarea>
+            </div>
+            <div class="control-group">
+                <div class="control-label">Author Byline</div>
+                <input type="text" id="inputByline" value="BY J. MARCUS ROSS">
+            </div>
+            <div class="control-group">
+                <div class="control-label"><span>Letter Spacing (Tracking)</span><span id="trackVal">-0.03em</span></div>
+                <input type="range" id="trackSlider" min="-10" max="20" value="-3">
+            </div>
+            <div class="control-group">
+                <div class="control-label"><span>Line Height (Leading)</span><span id="leadVal">1.02</span></div>
+                <input type="range" id="leadSlider" min="80" max="150" value="102">
+            </div>
+        </div>
+
+        <!-- 6. Production Export -->
+        <div class="card">
+            <div class="card-title">6. Production Export</div>
+            <button id="exportBtn" class="btn-export">✨ Export Current Format (4K PNG)</button>
+            <div class="btn-grid">
+                <button id="exportBatchBtn" class="btn-export-alt">📦 Export All Sizes (Batch)</button>
+                <button id="resetBtn" class="btn-export-alt">↺ Reset Settings</button>
+            </div>
+        </div>
+    </aside>
+
+    <script>
+        const body = document.body;
+        const stageContainer = document.getElementById('stageContainer');
+        const editorialCanvas = document.getElementById('editorialCanvas');
+        const scrimOverlay = document.getElementById('scrimOverlay');
+        const editorialContent = document.getElementById('editorialContent');
+        const mainTextBlock = document.getElementById('mainTextBlock');
+
+        // Split Panel Elements
+        const splitColumnPanel = document.getElementById('splitColumnPanel');
+        const splitControls = document.getElementById('splitControls');
+        const splitWidthSelect = document.getElementById('splitWidthSelect');
+        const splitThemeSelect = document.getElementById('splitThemeSelect');
+        const splitMetaHeader = document.getElementById('splitMetaHeader');
+        const splitKickerText = document.getElementById('splitKickerText');
+        const splitHeadline = document.getElementById('splitHeadline');
+        const splitSubhead = document.getElementById('splitSubhead');
+        const splitByline = document.getElementById('splitByline');
+
+        // Text Elements
+        const dispMetaHeader = document.getElementById('dispMetaHeader');
+        const dispDateHeader = document.getElementById('dispDateHeader');
+        const dispKickerText = document.getElementById('dispKickerText');
+        const dispHeadline = document.getElementById('dispHeadline');
+        const dispSubhead = document.getElementById('dispSubhead');
+        const dispByline = document.getElementById('dispByline');
+        const dispRule = document.getElementById('dispRule');
+
+        // Logo Elements
+        const brandLogoContainer = document.getElementById('brandLogoContainer');
+        const dispLogoImg = document.getElementById('dispLogoImg');
+        const dispLogoText = document.getElementById('dispLogoText');
+        const logoInput = document.getElementById('logoInput');
+        const inputBrandName = document.getElementById('inputBrandName');
+        const logoPosSelect = document.getElementById('logoPosSelect');
+        const logoSizeSlider = document.getElementById('logoSizeSlider');
+        const invertLogoCheck = document.getElementById('invertLogoCheck');
+
+        // Inputs
+        const imageInput = document.getElementById('imageInput');
+        const aspectSelect = document.getElementById('aspectSelect');
+        const archetypeSelect = document.getElementById('archetypeSelect');
+        const presetSelect = document.getElementById('presetSelect');
+        const backdropSelect = document.getElementById('backdropSelect');
+        const inputMetaHeader = document.getElementById('inputMetaHeader');
+        const inputDateHeader = document.getElementById('inputDateHeader');
+        const inputKicker = document.getElementById('inputKicker');
+        const inputHeadline = document.getElementById('inputHeadline');
+        const inputSubhead = document.getElementById('inputSubhead');
+        const inputByline = document.getElementById('inputByline');
+        const scrimSlider = document.getElementById('scrimSlider');
+        const trackSlider = document.getElementById('trackSlider');
+        const leadSlider = document.getElementById('leadSlider');
+        const exportBtn = document.getElementById('exportBtn');
+        const exportBatchBtn = document.getElementById('exportBatchBtn');
+        const paletteBar = document.getElementById('paletteBar');
+
+        // Parse headlines for bracketed emphasis [like this]
+        function parseHeadline(text) {
+            if (text.includes('[') && text.includes(']')) {
+                return text.replace(/\[(.*?)\]/g, '<span class="headline-emphasis">$1</span>');
+            }
+            return text;
+        }
+
+        // Real-Time Content Sync across both Standard Overlay and Split-Column Panel
+        function syncContent() {
+            const meta = inputMetaHeader.value.toUpperCase();
+            const kicker = inputKicker.value.toUpperCase();
+            const sub = inputSubhead.value;
+            const byline = inputByline.value.toUpperCase();
+            const parsedHead = parseHeadline(inputHeadline.value);
+
+            dispMetaHeader.innerText = meta;
+            splitMetaHeader.innerText = meta;
+
+            dispKickerText.innerText = kicker;
+            splitKickerText.innerText = kicker;
+
+            dispSubhead.innerText = sub;
+            splitSubhead.innerText = sub;
+
+            dispByline.innerText = byline;
+            splitByline.innerText = byline;
+
+            dispHeadline.innerHTML = parsedHead;
+            splitHeadline.innerHTML = parsedHead;
+        }
+
+        inputMetaHeader.addEventListener('input', syncContent);
+        inputDateHeader.addEventListener('input', (e) => dispDateHeader.innerText = e.target.value.toUpperCase());
+        inputKicker.addEventListener('input', syncContent);
+        inputSubhead.addEventListener('input', syncContent);
+        inputByline.addEventListener('input', syncContent);
+        inputHeadline.addEventListener('input', syncContent);
+
+        // Alignment Switcher
+        function setTextAlign(align) {
+            editorialContent.style.textAlign = align;
+            mainTextBlock.style.textAlign = align;
+            dispKickerText.parentElement.style.justifyContent = align === 'center' ? 'center' : (align === 'right' ? 'flex-end' : 'flex-start');
+            
+            document.querySelectorAll('.btn-align').forEach(btn => btn.classList.remove('active'));
+            if (align === 'left') document.querySelectorAll('.btn-align')[0].classList.add('active');
+            if (align === 'center') document.querySelectorAll('.btn-align')[1].classList.add('active');
+            if (align === 'right') document.querySelectorAll('.btn-align')[2].classList.add('active');
+        }
+
+        // Split Panel Controls
+        splitWidthSelect.addEventListener('change', (e) => {
+            splitColumnPanel.style.width = e.target.value;
+            editorialContent.style.width = `${100 - parseInt(e.target.value)}%`;
+        });
+
+        splitThemeSelect.addEventListener('change', (e) => {
+            splitColumnPanel.className = `split-column-panel ${e.target.value}`;
+        });
+
+        // Logo & Brand Name Event Handlers
+        logoInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                dispLogoImg.src = event.target.result;
+                dispLogoImg.style.display = 'block';
+                dispLogoText.style.display = 'none';
+                document.getElementById('logoUploadLabel').innerText = `✓ ${file.name}`;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        inputBrandName.addEventListener('input', (e) => dispLogoText.innerText = e.target.value.toUpperCase());
+        logoPosSelect.addEventListener('change', (e) => brandLogoContainer.className = `brand-logo-container ${e.target.value}`);
+
+        logoSizeSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value);
+            document.getElementById('logoSizeVal').innerText = `${val}px`;
+            dispLogoImg.style.maxHeight = `${val}px`;
+            dispLogoText.style.fontSize = `${Math.max(10, val * 0.35)}px`;
+        });
+
+        invertLogoCheck.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                dispLogoImg.classList.add('invert-white');
+                dispLogoText.style.color = '#ffffff';
+            } else {
+                dispLogoImg.classList.remove('invert-white');
+                dispLogoText.style.color = '#09090b';
+            }
+        });
+
+        // Image & Auto Palette Extraction
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    editorialCanvas.style.backgroundImage = `url('${event.target.result}')`;
+                    document.getElementById('uploadLabel').innerText = `✓ ${file.name}`;
+                    extractPalette(img);
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        function extractPalette(img) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 100; canvas.height = 100;
+            ctx.drawImage(img, 0, 0, 100, 100);
+            
+            const data = ctx.getImageData(0, 0, 100, 100).data;
+            const colors = ['#3b82f6', '#d97706', '#10b981', '#8b5cf6', '#f4f4f5'];
+            
+            colors[0] = rgbToHex(data[500], data[501], data[502]);
+            colors[1] = rgbToHex(data[2500], data[2501], data[2502]);
+            colors[2] = rgbToHex(data[5000], data[5001], data[5002]);
+            colors[3] = rgbToHex(data[7500], data[7501], data[7502]);
+
+            paletteBar.innerHTML = '';
+            colors.forEach(hex => {
+                const dot = document.createElement('div');
+                dot.className = 'color-dot';
+                dot.style.background = hex;
+                dot.onclick = () => applyAccent(hex);
+                paletteBar.appendChild(dot);
+            });
+            applyAccent(colors[0]);
+        }
+
+        function rgbToHex(r, g, b) {
+            return '#' + [r, g, b].map(x => (x || 0).toString(16).padStart(2, '0')).join('');
+        }
+
+        function applyAccent(hex) {
+            document.documentElement.style.setProperty('--accent', hex);
+            dispRule.style.background = hex;
+        }
+
+        // Aspect Ratio
+        aspectSelect.addEventListener('change', (e) => stageContainer.style.aspectRatio = e.target.value);
+
+        // Archetype Switcher
+        archetypeSelect.addEventListener('change', (e) => {
+            const arch = e.target.value;
+            if (arch === 'split-column') {
+                editorialCanvas.classList.add('split-column-mode');
+                splitControls.style.display = 'block';
+                editorialContent.style.display = 'none';
+            } else {
+                editorialCanvas.classList.remove('split-column-mode');
+                splitControls.style.display = 'none';
+                editorialContent.style.display = 'flex';
+
+                if (arch === 'swiss-hero') {
+                    editorialContent.style.justifyContent = 'space-between';
+                    setTextAlign('left');
+                } else if (arch === 'big-small-contrast') {
+                    editorialContent.style.justifyContent = 'center';
+                    dispHeadline.innerHTML = `THE <span class="headline-emphasis" style="font-size:1.3em; display:block;">ARCHITECTURE</span> OF QUIET OPS`;
+                } else if (arch === 'full-cover') {
+                    editorialContent.style.justifyContent = 'space-between';
+                    setTextAlign('left');
+                } else if (arch === 'pull-quote') {
+                    editorialContent.style.justifyContent = 'center';
+                    setTextAlign('center');
+                    dispHeadline.innerHTML = `“High-performing operational systems thrive without reliance on visible friction.”`;
+                } else if (arch === 'executive-brief') {
+                    body.className = 'style-tech';
+                    presetSelect.value = 'style-tech';
+                    editorialContent.style.justifyContent = 'space-between';
+                    setTextAlign('left');
+                }
+            }
+        });
+
+        // Type System
+        presetSelect.addEventListener('change', (e) => body.className = e.target.value);
+
+        // Legibility Backdrop Box
+        backdropSelect.addEventListener('change', (e) => mainTextBlock.className = e.target.value);
+
+        // Scrim Slider
+        scrimSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value) / 100;
+            document.getElementById('scrimVal').innerText = `${e.target.value}%`;
+            scrimOverlay.style.background = `linear-gradient(180deg, rgba(0,0,0,${val * 0.7}) 0%, rgba(0,0,0,${val * 0.2}) 40%, rgba(0,0,0,${val * 0.95}) 100%)`;
+        });
+
+        // Tracking & Leading Micro-Adjustments
+        trackSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value) / 100;
+            document.getElementById('trackVal').innerText = `${val}em`;
+            dispHeadline.style.letterSpacing = `${val}em`;
+            splitHeadline.style.letterSpacing = `${val}em`;
+        });
+
+        leadSlider.addEventListener('input', (e) => {
+            const val = parseInt(e.target.value) / 100;
+            document.getElementById('leadVal').innerText = val.toFixed(2);
+            dispHeadline.style.lineHeight = val;
+            splitHeadline.style.lineHeight = val;
+        });
+
+        // High-Res Render Export
+        exportBtn.addEventListener('click', () => {
+            exportBtn.innerText = "Rendering 4K PNG...";
+            html2canvas(editorialCanvas, { scale: 3, useCORS: true }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `editorial-graphic-${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                exportBtn.innerText = "✨ Export Current Format (4K PNG)";
+            });
+        });
+
+        // Batch Export All Formats
+        exportBatchBtn.addEventListener('click', async () => {
+            exportBatchBtn.innerText = "Batch Exporting All Sizes...";
+            const ratios = ['16/9', '4/5', '1.91/1', '1/1'];
+
+            for (const r of ratios) {
+                stageContainer.style.aspectRatio = r;
+                await new Promise(res => setTimeout(res, 400));
+                
+                const canvas = await html2canvas(editorialCanvas, { scale: 3, useCORS: true });
+                const link = document.createElement('a');
+                link.download = `editorial-${r.replace('/', 'x')}-${Date.now()}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }
+            exportBatchBtn.innerText = "📦 Export All Sizes (Batch)";
+        });
+
+        // Reset Settings
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            archetypeSelect.value = 'swiss-hero';
+            presetSelect.value = 'style-swiss';
+            backdropSelect.value = 'backdrop-none';
+            logoPosSelect.value = 'logo-pos-bottom-right';
+            splitThemeSelect.value = 'split-theme-dark';
+            splitWidthSelect.value = '33%';
+            scrimSlider.value = 50;
+            trackSlider.value = -3;
+            leadSlider.value = 102;
+            body.className = 'style-swiss';
+            mainTextBlock.className = 'backdrop-none';
+            editorialCanvas.classList.remove('split-column-mode');
+            splitControls.style.display = 'none';
+            editorialContent.style.display = 'flex';
+            brandLogoContainer.className = 'brand-logo-container logo-pos-bottom-right';
+            dispMetaHeader.innerText = 'ISSUE NO. 04 • STRATEGY & RISK';
+            dispDateHeader.innerText = 'JULY 2026';
+            inputMetaHeader.value = 'ISSUE NO. 04 • STRATEGY & RISK';
+            inputDateHeader.value = 'JULY 2026';
+            dispHeadline.style.letterSpacing = '-0.03em';
+            dispHeadline.style.lineHeight = '1.02';
+            dispHeadline.innerHTML = "The Architecture of <span class=\"headline-emphasis\">Quiet Operations</span>";
+            scrimOverlay.style.background = 'linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.1) 40%, rgba(0,0,0,0.475) 100%)';
+            document.getElementById('scrimVal').innerText = '50%';
+            document.getElementById('trackVal').innerText = '-0.03em';
+            document.getElementById('leadVal').innerText = '1.02';
+            setTextAlign('left');
+        });
+    </script>
+</body>
+</html>
